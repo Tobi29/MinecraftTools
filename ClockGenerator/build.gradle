@@ -1,0 +1,25 @@
+apply plugin: 'java'
+
+sourceCompatibility = 1.8
+version = '1.0'
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    compile project(":ScapesEngine:Utils")
+    compile "commons-cli:commons-cli:1.3.1"
+
+    testCompile "junit:junit:4.12"
+}
+
+jar {
+    from {
+        configurations.runtime.collect { it.isDirectory() ? it : zipTree(it) }
+    }
+    manifest {
+        attributes(
+                "Main-Class": "com.tobi29.minecraft.utils.clockgenerator.ClockGenerator")
+    }
+}
