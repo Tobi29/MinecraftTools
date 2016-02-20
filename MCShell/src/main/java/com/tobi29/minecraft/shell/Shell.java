@@ -15,6 +15,8 @@
  */
 package com.tobi29.minecraft.shell;
 
+import org.apache.commons.cli.*;
+
 import java.io.*;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -27,6 +29,32 @@ public class Shell {
     private static final int STREAM_BUFFER = 1 << 10 << 2;
 
     public static void main(String[] args) throws IOException {
+        Options options = new Options();
+        options.addOption("h", "help", false, "Print this text and exit");
+        options.addOption("v", "version", false, "Print version and exit");
+        options.addOption("m", "main", true, "Main class");
+        DefaultParser parser = new DefaultParser();
+        CommandLine commandLine;
+        try {
+            commandLine = parser.parse(options, args);
+        } catch (ParseException e) {
+            System.err.println(e.getMessage());
+            System.exit(255);
+            return;
+        }
+        if (commandLine.hasOption('h')) {
+            HelpFormatter helpFormatter = new HelpFormatter();
+            helpFormatter.printHelp("mcshell", options);
+            System.exit(0);
+            return;
+        }
+        if (commandLine.hasOption('v')) {
+            System.out.println("0.Something.Something_Whatever");
+            System.exit(0);
+            return;
+        }
+        String mainClass = commandLine.getOptionValue('m', "net.minecraft.server.MinecraftServer");
+
         // Intercept IO
         PrintStream stdout = System.out;
         PrintStream stderr = System.err;
@@ -44,7 +72,7 @@ public class Shell {
         Method mainMethod;
         try {
             Class<?> minecraftServer = ClassLoader.getSystemClassLoader()
-                    .loadClass("net.minecraft.server.MinecraftServer");
+                    .loadClass(mainClass);
             mainMethod = minecraftServer.getMethod("main", String[].class);
         } catch (ClassNotFoundException e) {
             stderr.println(
@@ -103,9 +131,10 @@ public class Shell {
                     }
                     int available = mcout.available();
                     if (available > 0) {
-                        while (mcout.available() > STREAM_BUFFER) {
-                            mcout.skip(STREAM_BUFFER);
+                        while (available > STREAM_BUFFER) {
+                            mcout.skip(available - STREAM_BUFFER);
                             stdout.println("Skipping data...");
+                            available = mcout.available();
                         }
                         int length = mcout.read(buffer);
                         if (length > 0) {
@@ -115,9 +144,10 @@ public class Shell {
                     }
                     available = mcerr.available();
                     if (available > 0) {
-                        while (mcerr.available() > STREAM_BUFFER) {
-                            mcerr.skip(STREAM_BUFFER);
+                        while (available > STREAM_BUFFER) {
+                            mcerr.skip(available - STREAM_BUFFER);
                             stderr.println("Skipping data...");
+                            available = mcerr.available();
                         }
                         int length = mcerr.read(buffer);
                         if (length > 0) {
@@ -159,7 +189,7 @@ public class Shell {
 
         // Run Server
         try {
-            mainMethod.invoke(null, new Object[]{args});
+            mainMethod.invoke(null, new Object[]{commandLine.getArgs()});
         } catch (IllegalAccessException | InvocationTargetException e) {
             stderr.println("Failed to run Server: " + e.toString());
             System.exit(21);
