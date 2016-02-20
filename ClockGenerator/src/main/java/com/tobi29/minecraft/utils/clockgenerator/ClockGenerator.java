@@ -44,10 +44,12 @@ public class ClockGenerator {
             HelpFormatter helpFormatter = new HelpFormatter();
             helpFormatter.printHelp("clock-generator", options);
             System.exit(0);
+            return;
         }
         if (commandLine.hasOption('v')) {
             System.out.println("0.Something.Something_Whatever");
             System.exit(0);
+            return;
         }
         Path path = Paths.get(".");
         Path output =
